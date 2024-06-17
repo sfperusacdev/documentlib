@@ -10,17 +10,15 @@ import (
 	connection "github.com/user0608/pg-connection"
 )
 
-type DocumentStateManager interface {
-}
-type statemanager struct {
+type DocumentStateManager struct {
 	manager connection.StorageManager
 	service services.ExternalBridgeService
 }
 
 func New(manager connection.StorageManager, service services.ExternalBridgeService) DocumentStateManager {
-	return &statemanager{manager: manager, service: service}
+	return DocumentStateManager{manager: manager, service: service}
 }
-func (s *statemanager) getEstadoActual(ctx context.Context, document, codigoDocumento string) (string, error) {
+func (s *DocumentStateManager) getEstadoActual(ctx context.Context, document, codigoDocumento string) (string, error) {
 	var tx = s.manager.Conn(ctx)
 	var estado sql.NullString
 	var rs = tx.Table(document).Select("estado").Where("codigo=?", codigoDocumento).Find(&estado)
@@ -34,7 +32,7 @@ func (s *statemanager) getEstadoActual(ctx context.Context, document, codigoDocu
 	}
 	return estado.String, nil
 }
-func (s *statemanager) cambiarEstado(ctx context.Context, documento, codigoDocumento, nuevo_estado string) error {
+func (s *DocumentStateManager) cambiarEstado(ctx context.Context, documento, codigoDocumento, nuevo_estado string) error {
 	var tx = s.manager.Conn(ctx)
 	var rs = tx.Table(documento).Where("codigo=?", codigoDocumento).Update("estado", nuevo_estado)
 	if rs.Error != nil {
@@ -53,7 +51,7 @@ type documentStateComand struct {
 func (h *documentStateComand) ConfirmarCambio() error { return h.callback() }
 
 // documento es el nombre de tabla y codigoDocumento el primary key
-func (s *statemanager) CambiarEstadoDocumento(ctx context.Context, documento, codigoDocumento, nuevo_estado string) (*documentStateComand, error) {
+func (s *DocumentStateManager) CambiarEstadoDocumento(ctx context.Context, documento, codigoDocumento, nuevo_estado string) (*documentStateComand, error) {
 	estados, err := s.service.GetEstadosDocumentoSegunUser(ctx, documento)
 	if err != nil {
 		return nil, err
