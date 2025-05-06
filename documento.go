@@ -12,10 +12,10 @@ import (
 
 type DocumentStateManager struct {
 	manager connection.StorageManager
-	service services.ExternalBridgeService
+	service *services.ExternalBridgeService
 }
 
-func New(manager connection.StorageManager, service services.ExternalBridgeService) DocumentStateManager {
+func New(manager connection.StorageManager, service *services.ExternalBridgeService) DocumentStateManager {
 	return DocumentStateManager{manager: manager, service: service}
 }
 func (s *DocumentStateManager) getEstadoActual(ctx context.Context, document, codigoDocumento string) (string, error) {
@@ -27,7 +27,7 @@ func (s *DocumentStateManager) getEstadoActual(ctx context.Context, document, co
 	}
 	if !estado.Valid || estado.String == "" {
 		const format = "El documento '%s' con el identificador '%s' no tiene un estado definido."
-		var err = errs.Bad(format, document, identitysdk.RemovePrefix(codigoDocumento))
+		var err = errs.BadRequestf(format, document, identitysdk.RemovePrefix(codigoDocumento))
 		return "", err
 	}
 	return estado.String, nil
@@ -62,12 +62,12 @@ func (s *DocumentStateManager) CambiarEstadoDocumento(ctx context.Context, docum
 	}
 	if !estados.Contains(estadoActual) {
 		const format = "Este usuario no está autorizado a cambiar el estado."
-		return nil, errs.Bad(format)
+		return nil, errs.BadRequestDirect(format)
 	}
 	for _, itm := range estados {
 		if itm.Estado == estadoActual && itm.IsFinal {
-			const format = "El estado de este documento no puede ser modificado."
-			return nil, errs.Bad(format)
+			const format = "El estado de este documento no puede ser modificado"
+			return nil, errs.BadRequestDirect(format)
 		} else if itm.Estado == estadoActual {
 			break
 		}
